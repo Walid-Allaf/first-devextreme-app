@@ -34,7 +34,7 @@ export default function Home() {
   const [navItems, setNavItems] = useState(JSON.parse(localStorage.getItem("navItems") || "[]"));
   const [dataSource, setDataSource] = useState<Array<any>>([]);
   let localArray = JSON.parse(localStorage.getItem("navItems") || "[]");
-  const [data, setData] = useState([]);
+  const [data, setData] = useState<Array<any>>([]);
   const handlePopupHidden = useCallback(() => {
     setPopupVisible(false);
     setSelectedValue("");
@@ -51,25 +51,29 @@ export default function Home() {
       )
       .then((res) => {
         setLoading(false);
-        setData(
-          JSON.parse(res.data).ArchiveHeader.Archive.map((data: any) => ({
-            text: data.TextValue01,
-            startDate: new Date(data.CardDate),
-            endDate: new Date(data.CardDate),
-            id: data.ID,
-            color: "#727bd2",
-          }))
-        );
+        setData((prev) => {
+          return [
+            ...prev,
+            ...JSON.parse(res.data).ArchiveHeader.Archive.map((data: any) => ({
+              text: data.TextValue01,
+              startDate: new Date(data.CardDate),
+              endDate: new Date(data.CardDate),
+              id: data.ID,
+              color: "#727bd2",
+            })),
+          ];
+        });
         console.log(JSON.parse(res.data).ArchiveHeader.Archive);
+        localArray.push({
+          ID: scheduler.filter((item) => item.ID === selectedValue)[0].ID,
+          CardName: scheduler.filter((item) => item.ID === selectedValue)[0].CardName,
+          IDS: JSON.parse(res.data).ArchiveHeader.Archive.map((item: any) => item.ID),
+        });
       })
       .catch((err) => {
         setLoading(false);
       });
 
-    localArray.push({
-      ID: scheduler.filter((item) => item.ID === selectedValue)[0].ID,
-      CardName: scheduler.filter((item) => item.ID === selectedValue)[0].CardName,
-    });
     localStorage.setItem("navItems", JSON.stringify(localArray));
     setNavItems(localArray);
   };
@@ -81,7 +85,9 @@ export default function Home() {
     );
     localArray = localArray.filter((el: LocalArray) => el.ID !== item.ID);
     setNavItems(localArray);
-    setData((prev) => prev.filter((el: any) => el.id !== item.ID));
+    setData((prev) => {
+      return [prev.filter((el: any) => item.IDS.includes(el.id))];
+    });
     console.log(data);
   };
   const productWithPlaceholderLabel = { "aria-label": "Product With Placeholder" };

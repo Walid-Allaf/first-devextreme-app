@@ -89,6 +89,7 @@ export type Customize = {
 };
 
 export type LocalArray = {
+  IDS: Array<number>;
   ID: string;
   CardName: string;
 };
