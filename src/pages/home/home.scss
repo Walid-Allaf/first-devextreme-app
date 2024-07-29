@@ -46,6 +46,7 @@
 .scheduler {
   background-color: #f7f9fa;
   padding: 25px;
+  direction: ltr;
 }
 
 .left-side-bar,
@@ -139,8 +140,9 @@
   .single-switch {
     display: flex;
     align-items: center;
+    direction: ltr;
     & .dx-field-label {
-      min-width: 100%;
+      min-width: 100px;
     }
   }
 }

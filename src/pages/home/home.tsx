@@ -26,6 +26,7 @@ export default function Home() {
   const [selectedValues, setSelectedValues] = useState<Array<CustomizeBody>>([]);
   const [loading, setLoading] = useState<Boolean>(false);
   const [scheduler, setScheduler] = useState<Array<Customize>>([]);
+  const [step2, setStep2] = useState<string>("");
   const [step3, setStep3] = useState<Array<CustomizeBody>>([]);
   const [archive, setArchive] = useState<{ TypeGuide: string; DataSource: Array<any> }>({
     TypeGuide: "",
@@ -35,19 +36,39 @@ export default function Home() {
   const [dataSource, setDataSource] = useState<Array<any>>([]);
   let localArray = JSON.parse(localStorage.getItem("navItems") || "[]");
   const [data, setData] = useState<Array<any>>([]);
-  const handlePopupHidden = useCallback(() => {
+  const [dialogType, setDialogType] = useState<"add" | "edit">("add");
+
+  const handlePopupHidden = () => {
     setPopupVisible(false);
     setSelectedValue("");
     setSelectedValues([]);
     setStep3([]);
+    setDataSource([]);
     setArchive({ TypeGuide: "", DataSource: [] });
-  }, [setPopupVisible]);
+    console.log(selectedValues);
+  };
   const handleAdd = async () => {
     handlePopupHidden();
-    let cardCols = dataSource.map((data) => data.PropertyValue).join(",");
+    let cardCols = dataSource.map((data) => data.PropertyValue);
+    if (dialogType === "edit") {
+      setData((prev) => {
+        return [
+          ...prev.filter((el) =>
+            JSON.parse(localStorage.getItem("navItems") || "[]")
+              .filter((item: any) => item.ID === selectedValue)[0]
+              .IDS.includes(el.ID)
+          ),
+        ];
+      });
+      localArray = localArray.filter((el: any) => el.ID !== selectedValue);
+    }
     await axios
       .get(
-        `/Archive/GetArchive?ID=&First=0&Last=&Before=&After=&CardGuide=&TypeGuide=${archive.TypeGuide}&ArchiveTables=[{"TableID":"30334","FilterIndex":"6","TableColumns":"CardNumber,CardNumber2,NumberValue2,AgentGuide,ItemGuide,Notes"},{"TableID":"30341","FilterIndex":"27","TableColumns":"CardDate,CardNumber,BooleanValue01,Notes2"}]&CardColumns=CardDate,${cardCols}`
+        `/Archive/GetArchive?ID=&First=0&Last=&Before=&After=&CardGuide=&TypeGuide=${
+          archive.TypeGuide
+        }&ArchiveTables=[{"TableID":"30334","FilterIndex":"6","TableColumns":"CardNumber,CardNumber2,NumberValue2,AgentGuide,ItemGuide,Notes"},{"TableID":"30341","FilterIndex":"27","TableColumns":"CardDate,CardNumber,BooleanValue01,Notes2"}]&CardColumns=CardDate,${cardCols.join(
+          ","
+        )}`
       )
       .then((res) => {
         setLoading(false);
@@ -55,11 +76,10 @@ export default function Home() {
           return [
             ...prev,
             ...JSON.parse(res.data).ArchiveHeader.Archive.map((data: any) => ({
-              text: data.TextValue01,
+              text: cardCols.map((col) => data[col]),
               startDate: new Date(data.CardDate),
               endDate: new Date(data.CardDate),
               id: data.ID,
-              color: "#727bd2",
             })),
           ];
         });
@@ -68,14 +88,15 @@ export default function Home() {
           ID: scheduler.filter((item) => item.ID === selectedValue)[0].ID,
           CardName: scheduler.filter((item) => item.ID === selectedValue)[0].CardName,
           IDS: JSON.parse(res.data).ArchiveHeader.Archive.map((item: any) => item.ID),
+          cardCols: cardCols,
+          step2: step2,
         });
+        localStorage.setItem("navItems", JSON.stringify(localArray));
+        setNavItems(localArray);
       })
       .catch((err) => {
         setLoading(false);
       });
-
-    localStorage.setItem("navItems", JSON.stringify(localArray));
-    setNavItems(localArray);
   };
 
   const deletItem = (item: LocalArray) => {
@@ -118,12 +139,12 @@ export default function Home() {
 
   const Step3 = (e: ValueChangedEvent) => {
     console.log("value", e.value);
+    setStep2(e.value);
     setStep3(
       scheduler
         .filter((item) => item.ID === selectedValue)[0]
         ?.CustomizeBody.filter(
-          (el: CustomizeBody) =>
-            (el.ControlType === "3" || el.ControlType === "1") && el.PropertyName === "Caption"
+          (el: CustomizeBody) => el.ControlType === "1" && el.PropertyName === "Caption"
         )
     );
     console.log(
@@ -151,7 +172,7 @@ export default function Home() {
   };
 
   const valueChanged = (e: SwitchTypes.ValueChangedEvent, value: string) => {
-    console.log(typeof e.value, typeof value);
+    console.log(e.value, value);
     if (e.value === true) {
       setDataSource([
         ...dataSource,
@@ -167,14 +188,14 @@ export default function Home() {
     } else {
       setDataSource(dataSource.filter((item) => item.ID !== value));
     }
-    console.log(dataSource);
+    console.log("dataSource", dataSource);
   };
 
   const renderPopup = () => {
     return (
       <div className="popup-property-details">
         <div className="popup-title">
-          <p>إضافة عنصر للأجندة</p>
+          {dialogType === "add" ? <p>إضافة عنصر للأجندة</p> : <p>تعديل عنصر في الأجندة</p>}
           <Button icon="remove" stylingMode="contained" onClick={handlePopupHidden} />
         </div>
 
@@ -190,7 +211,7 @@ export default function Home() {
                 displayExpr="CardName"
                 valueExpr="ID"
                 onValueChanged={onValueChanged}
-                defaultValue={selectedValue}
+                value={selectedValue}
                 // fieldRender={Field}
                 // itemRender={ItemRender}
               />
@@ -207,7 +228,7 @@ export default function Home() {
           </div>
         )}
         {loading && <p>جاري التحميل...</p>}
-        {!loading && selectedValues.length > 0 && (
+        {!loading && selectedValues && (
           <div className="text-field">
             <div>
               <p className="dx-field-label">استنادا على حقل</p>
@@ -218,7 +239,7 @@ export default function Home() {
                 inputAttr={productWithPlaceholderLabel}
                 displayExpr="PropertyValue"
                 valueExpr="ID"
-                // defaultValue={selectedValues[0].ID}
+                value={step2}
                 onValueChanged={Step3}
               />
             </div>
@@ -229,10 +250,15 @@ export default function Home() {
             <div className="switches">
               {step3.map((step) => (
                 <div className="single-switch">
-                  <div className="dx-field-value">
-                    <Switch defaultValue={false} onValueChanged={(e) => valueChanged(e, step.ID)} />
-                  </div>
                   <p className="dx-field-label">{step.PropertyValue}</p>
+                  <div className="dx-field-value">
+                    <Switch
+                      defaultValue={
+                        dataSource.filter((item: any) => item.ID === step.ID).length > 0
+                      }
+                      onValueChanged={(e) => valueChanged(e, step.ID)}
+                    />
+                  </div>
                 </div>
               ))}
             </div>
@@ -246,7 +272,6 @@ export default function Home() {
             stylingMode="contained"
             type="default"
             onClick={handleAdd}
-            disabled={archive.DataSource.length === 0}
           />
           <Button
             text="إلغاء الأمر"
@@ -277,6 +302,61 @@ export default function Home() {
       });
   };
 
+  const addDialog = () => {
+    setPopupVisible(true);
+    setDialogType("add");
+  };
+
+  const editDialog = (id: string) => {
+    console.log(id);
+    setSelectedValue(id);
+    setSelectedValues(
+      scheduler
+        .filter((el) => el.ID === id)[0]
+        ?.CustomizeBody.filter(
+          (el: CustomizeBody) => el.ControlType === "3" && el.PropertyName === "Caption"
+        )
+    );
+    setStep2(
+      JSON.parse(localStorage.getItem("navItems") || "[]").filter((item: any) => item.ID === id)[0]
+        .step2
+    );
+    setStep3(
+      scheduler
+        .filter((el) => el.ID === id)[0]
+        ?.CustomizeBody.filter(
+          (el: CustomizeBody) => el.ControlType === "1" && el.PropertyName === "Caption"
+        )
+    );
+    setDataSource(
+      scheduler
+        .filter((item) => item.ID === id)[0]
+        ?.CustomizeBody.filter(
+          (el: CustomizeBody) =>
+            (el.ControlType === "3" || el.ControlType === "1") &&
+            el.PropertyName === "DataSource" &&
+            JSON.parse(localStorage.getItem("navItems") || "[]")
+              .filter((item: any) => item.ID === id)[0]
+              .cardCols.includes(el.PropertyValue)
+        )
+    );
+    console.log(
+      scheduler
+        .filter((item) => item.ID === id)[0]
+        ?.CustomizeBody.filter(
+          (el: CustomizeBody) =>
+            (el.ControlType === "3" || el.ControlType === "1") &&
+            el.PropertyName === "DataSource" &&
+            JSON.parse(localStorage.getItem("navItems") || "[]")
+              .filter((item: any) => item.ID === id)[0]
+              .cardCols.includes(el.PropertyValue)
+        )
+    );
+
+    setDialogType("edit");
+    setPopupVisible(true);
+  };
+
   useEffect(() => {
     getScheduler();
   }, []);
@@ -294,7 +374,7 @@ export default function Home() {
           <Location row={2} col={0} screen="sm"></Location>
           <div className="left-side-bar item">
             <div className="add">
-              <Button icon={ADD} width={55} height={55} onClick={() => setPopupVisible(true)} />
+              <Button icon={ADD} width={55} height={55} onClick={addDialog} />
               <p>إضافة الى الأجندة</p>
             </div>
             {navItems.length === 0 ? (
@@ -312,32 +392,7 @@ export default function Home() {
                         <div onClick={() => deletItem(item)} className="nav-item-icon">
                           <img src={DELETE} alt="delete" width={15} height={15} />
                         </div>
-                        <div
-                          onClick={() => {
-                            setSelectedValue(item.ID);
-                            setSelectedValues(
-                              scheduler
-                                .filter((el) => el.ID === item.ID)[0]
-                                ?.CustomizeBody.filter(
-                                  (el: CustomizeBody) =>
-                                    el.ControlType === "3" && el.PropertyName === "Caption"
-                                )
-                            );
-                            setStep3(
-                              scheduler
-                                .filter((el) => el.ID === item.ID)[0]
-                                ?.CustomizeBody.filter(
-                                  (el: CustomizeBody) =>
-                                    (el.ControlType === "3" || el.ControlType === "1") &&
-                                    el.PropertyName === "Caption"
-                                )
-                            );
-                            setTimeout(() => {
-                              setPopupVisible(true);
-                            }, 500);
-                          }}
-                          className="nav-item-icon"
-                        >
+                        <div onClick={() => editDialog(item.ID)} className="nav-item-icon">
                           <img src={EDIT} alt="edit" width={15} height={15} />
                         </div>
                       </div>
@@ -363,15 +418,6 @@ export default function Home() {
               height={730}
               startDayHour={9}
             />
-            {/* <Resource
-              dataSource={data}
-              allowMultiple={true}
-              displayExpr="TextValue01"
-              valueExpr="TextValue01"
-              fieldExpr="CardDate"
-              label="TextValue01"
-              useColorAsDefault={true}
-            /> */}
           </div>
         </Item>
         {/* RIGHT */}
