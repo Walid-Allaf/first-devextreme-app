@@ -51,3 +51,39 @@
     width: 400px;
   }
 }
+.left-side-header {
+  .username {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    p:nth-of-type(1) {
+      color: #212121;
+    }
+    p:nth-of-type(2) {
+      color: #1450a3;
+      font-size: 12px;
+      font-weight: 500;
+    }
+  }
+  direction: ltr;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  p {
+    margin: 0;
+    text-wrap: nowrap;
+  }
+  .dx-field-value {
+    display: flex;
+    align-items: center;
+
+    * {
+      box-shadow: none;
+    }
+    .dx-state-hover {
+      box-shadow: none;
+    }
+    background-color: transparent;
+  }
+}

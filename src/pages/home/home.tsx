@@ -1,15 +1,6 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./home.scss";
-import {
-  Box,
-  Button,
-  ContextMenu,
-  List,
-  Popup,
-  SelectBox,
-  TextBox,
-  Validator,
-} from "devextreme-react";
+import { Button, List, Popup, SelectBox, TextBox } from "devextreme-react";
 import Switch, { SwitchTypes } from "devextreme-react/switch";
 import ResponsiveBox, { Row, Col, Item, Location } from "devextreme-react/responsive-box";
 import { ADD, DELETE, EDIT, NOCONTENT } from "../../assets";
@@ -396,7 +387,10 @@ export default function Home() {
                           <img src={EDIT} alt="edit" width={15} height={15} />
                         </div>
                       </div>
-                      <p>{item.CardName}</p>
+                      <div className="nav-item-text">
+                        <p>{item.CardName}</p>
+                        <p>اسم اضافة {item.CardName}</p>
+                      </div>
                     </div>
                   )}
                 />
@@ -415,7 +409,7 @@ export default function Home() {
               views={views}
               defaultCurrentView="month"
               defaultCurrentDate={currentDate}
-              height={730}
+              height={640}
               startDayHour={9}
             />
           </div>
@@ -427,7 +421,10 @@ export default function Home() {
           <div className="right-side-bar item">
             <ul>
               {rightNav.map((item, index) => (
-                <li key={index}>{item.title}</li>
+                <li key={index}>
+                  <img src={item.icon} alt={item.title} width={32} height={32} />
+                  <p>{item.title}</p>
+                </li>
               ))}
             </ul>
           </div>

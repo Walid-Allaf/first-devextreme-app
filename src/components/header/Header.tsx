@@ -6,10 +6,12 @@ import UserPanel from "../user-panel/UserPanel";
 import "./Header.scss";
 import { Template } from "devextreme-react/core/template";
 import type { HeaderProps } from "../../types";
-import { TextBox } from "devextreme-react";
-import { LOGO } from "../../assets";
+import { SelectBox, TextBox } from "devextreme-react";
+import { FLAG, GLETTER, LOGO, NOTIFICATION } from "../../assets";
+import { useScreenSize } from "../../utils/media-query";
 
 export default function Header({ menuToggleEnabled, title, toggleMenu }: HeaderProps) {
+  const { isLarge, isMedium } = useScreenSize();
   const passwordButton = useMemo<ButtonTypes.Properties>(
     () => ({
       icon: LOGO,
@@ -22,6 +24,31 @@ export default function Header({ menuToggleEnabled, title, toggleMenu }: HeaderP
     }),
     []
   );
+
+  const leftSide = () => {
+    return (
+      <div className="left-side-header">
+        <div className="username">
+          <img src={GLETTER} alt="g" width={50} height={50} />
+          <div>
+            <p>اسم المستخدم</p>
+            <p>مجموعة المدراء</p>
+          </div>
+        </div>
+        <img src={NOTIFICATION} alt="notification" width={21} height={24} />
+        <div className="dx-field-value">
+          <img src={FLAG} alt="flag" />
+          <SelectBox
+            items={["English", "Arabic"]}
+            defaultValue={"English"}
+            stylingMode="outlined"
+            width={130}
+          />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <header className={"header-component"}>
       <Toolbar className={"header-toolbar"}>
@@ -33,9 +60,16 @@ export default function Header({ menuToggleEnabled, title, toggleMenu }: HeaderP
         >
           <Button icon="menu" stylingMode="text" onClick={toggleMenu} />
         </Item>
-        <Item location={"before"} cssClass={"header-title"} text={title} visible={!!title} />
+        <Item
+          location={"before"}
+          cssClass={"header-title"}
+          // text={title}
+          visible={isMedium || isLarge}
+          render={leftSide}
+        />
         <Item location={"center"} cssClass={"header-search"}>
           <TextBox
+            visible={isMedium || isLarge}
             showClearButton
             stylingMode="outlined"
             placeholder="ابحث..."
