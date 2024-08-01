@@ -28,6 +28,9 @@ export default function Home() {
   let localArray = JSON.parse(localStorage.getItem("navItems") || "[]");
   const [data, setData] = useState<Array<any>>([]);
   const [dialogType, setDialogType] = useState<"add" | "edit">("add");
+  const [color, setColor] = useState<"#8697FF" | "#32E844" | "#D84E45" | "#ADDCFF">("#8697FF");
+  const Colors: (typeof color)[] = ["#8697FF", "#32E844", "#D84E45", "#ADDCFF"];
+  const [title, setTitle] = useState<string>("");
 
   const handlePopupHidden = () => {
     setPopupVisible(false);
@@ -35,8 +38,10 @@ export default function Home() {
     setSelectedValues([]);
     setStep3([]);
     setDataSource([]);
+    setTitle("");
+    setStep2("");
+    setColor("#8697FF");
     setArchive({ TypeGuide: "", DataSource: [] });
-    console.log(selectedValues);
   };
   const handleAdd = async () => {
     handlePopupHidden();
@@ -44,10 +49,11 @@ export default function Home() {
     if (dialogType === "edit") {
       setData((prev) => {
         return [
-          ...prev.filter((el) =>
-            JSON.parse(localStorage.getItem("navItems") || "[]")
-              .filter((item: any) => item.ID === selectedValue)[0]
-              .IDS.includes(el.ID)
+          ...prev.filter(
+            (el) =>
+              !JSON.parse(localStorage.getItem("navItems") || "[]")
+                .filter((item: any) => item.ID === selectedValue)[0]
+                .IDS.includes(el.id)
           ),
         ];
       });
@@ -67,20 +73,24 @@ export default function Home() {
           return [
             ...prev,
             ...JSON.parse(res.data).ArchiveHeader.Archive.map((data: any) => ({
-              text: cardCols.map((col) => data[col]),
+              description: cardCols.map((col) => data[col] + "\n"),
+              text: title,
               startDate: new Date(data.CardDate),
               endDate: new Date(data.CardDate),
               id: data.ID,
+              color: color,
             })),
           ];
         });
-        console.log(JSON.parse(res.data).ArchiveHeader.Archive);
+
         localArray.push({
           ID: scheduler.filter((item) => item.ID === selectedValue)[0].ID,
           CardName: scheduler.filter((item) => item.ID === selectedValue)[0].CardName,
           IDS: JSON.parse(res.data).ArchiveHeader.Archive.map((item: any) => item.ID),
           cardCols: cardCols,
           step2: step2,
+          color: color,
+          title: title,
         });
         localStorage.setItem("navItems", JSON.stringify(localArray));
         setNavItems(localArray);
@@ -100,12 +110,11 @@ export default function Home() {
     setData((prev) => {
       return [prev.filter((el: any) => item.IDS.includes(el.id))];
     });
-    console.log(data);
   };
   const productWithPlaceholderLabel = { "aria-label": "Product With Placeholder" };
 
   const onValueChanged = (e: ValueChangedEvent) => {
-    console.log(e.previousValue);
+    // console.log(e.previousValue);
     setSelectedValue(e.value);
     setSelectedValues(
       scheduler
@@ -114,11 +123,7 @@ export default function Home() {
           (el: CustomizeBody) => el.ControlType === "3" && el.PropertyName === "Caption"
         )
     );
-    console.log(
-      scheduler
-        .filter((item) => item.ID === e.value)[0]
-        ?.CustomizeBody.filter((el: CustomizeBody) => el.PropertyName === "DataSource")
-    );
+
     setArchive({
       ...archive,
       TypeGuide: scheduler
@@ -129,26 +134,18 @@ export default function Home() {
   };
 
   const Step3 = (e: ValueChangedEvent) => {
-    console.log("value", e.value);
     setStep2(e.value);
     setStep3(
       scheduler
         .filter((item) => item.ID === selectedValue)[0]
         ?.CustomizeBody.filter(
-          (el: CustomizeBody) => el.ControlType === "1" && el.PropertyName === "Caption"
-        )
-    );
-    console.log(
-      "step3",
-      scheduler
-        .filter((item) => item.ID === selectedValue)[0]
-        ?.CustomizeBody.filter(
           (el: CustomizeBody) =>
-            (el.ControlType === "3" || el.ControlType === "1") && el.PropertyName === "DataSource"
+            (el.ControlType === "3" || el.ControlType === "1") &&
+            el.PropertyName === "Caption" &&
+            el.ID !== e.value
         )
-        .map((el: CustomizeBody) => el.PropertyValue)
-        .join(",")
     );
+
     setArchive({
       ...archive,
       DataSource: scheduler
@@ -163,7 +160,6 @@ export default function Home() {
   };
 
   const valueChanged = (e: SwitchTypes.ValueChangedEvent, value: string) => {
-    console.log(e.value, value);
     if (e.value === true) {
       setDataSource([
         ...dataSource,
@@ -179,7 +175,10 @@ export default function Home() {
     } else {
       setDataSource(dataSource.filter((item) => item.ID !== value));
     }
-    console.log("dataSource", dataSource);
+  };
+
+  const handleTitleChange = (e: any) => {
+    setTitle(e);
   };
 
   const renderPopup = () => {
@@ -214,6 +213,8 @@ export default function Home() {
                 showClearButton
                 stylingMode="outlined"
                 inputAttr={{ "aria-label": "Name" }}
+                onValueChange={(e) => handleTitleChange(e)}
+                value={title}
               />
             </div>
           </div>
@@ -236,7 +237,7 @@ export default function Home() {
             </div>
           </div>
         )}
-        {!loading && selectedValue && (
+        {!loading && selectedValue && step2 && (
           <div className="text-field">
             <div className="switches">
               {step3.map((step) => (
@@ -252,6 +253,22 @@ export default function Home() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+        {!loading && selectedValue && (
+          <div className="text-field colors">
+            <div>
+              <p className="dx-field-label">تحديد اللون في الاجندة</p>
+              <div className="circles">
+                {Colors.map((el) => (
+                  <div
+                    style={{ background: el, border: color === el ? "2px solid #000" : "none" }}
+                    className="circle"
+                    onClick={() => setColor(el)}
+                  ></div>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -286,7 +303,7 @@ export default function Home() {
       .then((res) => {
         setLoading(false);
         setScheduler(res.data.Customize.CustomizeHeader);
-        console.log(res.data.Customize.CustomizeHeader);
+        // console.log(res.data.Customize.CustomizeHeader);
       })
       .catch((err) => {
         setLoading(false);
@@ -299,7 +316,6 @@ export default function Home() {
   };
 
   const editDialog = (id: string) => {
-    console.log(id);
     setSelectedValue(id);
     setSelectedValues(
       scheduler
@@ -316,7 +332,10 @@ export default function Home() {
       scheduler
         .filter((el) => el.ID === id)[0]
         ?.CustomizeBody.filter(
-          (el: CustomizeBody) => el.ControlType === "1" && el.PropertyName === "Caption"
+          (el: CustomizeBody) =>
+            (el.ControlType === "3" || el.ControlType === "1") &&
+            el.PropertyName === "Caption" &&
+            el.ID !== step2
         )
     );
     setDataSource(
@@ -331,21 +350,22 @@ export default function Home() {
               .cardCols.includes(el.PropertyValue)
         )
     );
-    console.log(
-      scheduler
-        .filter((item) => item.ID === id)[0]
-        ?.CustomizeBody.filter(
-          (el: CustomizeBody) =>
-            (el.ControlType === "3" || el.ControlType === "1") &&
-            el.PropertyName === "DataSource" &&
-            JSON.parse(localStorage.getItem("navItems") || "[]")
-              .filter((item: any) => item.ID === id)[0]
-              .cardCols.includes(el.PropertyValue)
-        )
+    setTitle(
+      JSON.parse(localStorage.getItem("navItems") || "[]").filter((item: any) => item.ID === id)[0]
+        .title
     );
-
+    setColor(
+      JSON.parse(localStorage.getItem("navItems") || "[]").filter((item: any) => item.ID === id)[0]
+        .color
+    );
     setDialogType("edit");
     setPopupVisible(true);
+  };
+
+  const onAppointmentRendered = (e: any) => {
+    const { color } = e.appointmentData;
+    const backgroundColor = color; // Default color
+    e.appointmentElement.style.backgroundColor = backgroundColor;
   };
 
   useEffect(() => {
@@ -389,7 +409,7 @@ export default function Home() {
                       </div>
                       <div className="nav-item-text">
                         <p>{item.CardName}</p>
-                        <p>اسم اضافة {item.CardName}</p>
+                        <p>اسم اضافة {item.title}</p>
                       </div>
                     </div>
                   )}
@@ -411,6 +431,7 @@ export default function Home() {
               defaultCurrentDate={currentDate}
               height={640}
               startDayHour={9}
+              onAppointmentRendered={onAppointmentRendered}
             />
           </div>
         </Item>
@@ -433,7 +454,7 @@ export default function Home() {
 
       <div className="dialog">
         <Popup
-          width={660}
+          // width={"100%"}
           height={590}
           showTitle={false}
           title="إضافة عنصر للأجندة"
